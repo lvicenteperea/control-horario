@@ -36,6 +36,32 @@ Después comprobar conexión, crear los objetos y cargar los datos:
 
 `init-db` crea únicamente tablas y una vista con prefijo `ch_`. No borra ni modifica tablas de CORE, DATA u otras aplicaciones. Requiere permisos para crear tablas/vistas en la base seleccionada. Las futuras migraciones deberán realizarse explícitamente; `IF NOT EXISTS` no actualiza esquemas existentes.
 
+## Ver gráficos y resultados
+
+Después de importar datos, ejecutar desde la carpeta del repositorio:
+
+```powershell
+git pull --ff-only
+.\.venv\Scripts\python.exe dashboard.py
+```
+
+El programa solicita la contraseña una vez y abre el navegador en **http://127.0.0.1:8501**. Mantener abierta la terminal mientras se consulta; cerrar con `Ctrl+C`. Si el navegador no se abre, visitar esa dirección manualmente. No hay dependencias nuevas para el dashboard: utiliza Python y PyMySQL de los requisitos existentes. Usa la misma configuración `config.local.ini`. El servidor escucha únicamente en el propio ordenador y solo realiza consultas de lectura.
+
+Funciones disponibles:
+
+- Filtros por origen, persona, ámbito, tarea, fechas inicial/final (incluidas) y estado de revisión. Selección vacía significa todos los valores.
+- Búsqueda en el nombre de la tarea y la descripción original.
+- Total de horas asignadas, tareas, registros de origen distintos y horas pendientes de revisión.
+- Gráficos por tarea, evolución mensual y persona. El gráfico de tareas muestra las 15 principales; el resumen contiene todas.
+- Resumen por tarea, por mes y tarea o por persona y tarea.
+- Detalle de las asignaciones con descripción original, importación, fila y fecha heredada. Se muestran hasta 500 filas; la descarga incluye toda la selección.
+- CSV del resumen y del detalle, con separador `;`, coma decimal y codificación UTF-8 para Excel. Los textos que podrían interpretarse como fórmulas se exportan como texto.
+- **Actualizar datos** vuelve a consultar MariaDB después de hacer una carga, conservando los filtros que sigan disponibles.
+
+Ejemplo: seleccionar una tarea y las fechas desde `01/11/2026` hasta `30/11/2026` permite ver su dedicación total y el reparto por persona en noviembre. La aplicación muestra asignaciones de la vista `ch_v_hours`: incluye la carga completa activa y sus ampliaciones. No suma las horas originales repetidas por cada tarea. Los importes se muestran con hasta dos decimales en gráficos y con hasta seis en tablas y descargas; las sumas conservan los seis decimales almacenados.
+
+Si el puerto está ocupado, usar `dashboard.py --port 8502`. Para no abrir automáticamente el navegador, añadir `--no-browser`. Para otra configuración: `dashboard.py --config otra_config.local.ini`. No se publican datos en GitHub ni se envían a servicios de gráficos externos.
+
 ## Añadir meses nuevos (carga incremental)
 
 `control_horario.py` se mantiene para **cargas completas**. Para añadir meses nuevos, usar **`cargar_nuevos.py`**. Reutiliza la misma configuración y las reglas guardadas. Conserva los registros y las asignaciones ya existentes.
@@ -104,7 +130,7 @@ Guardar reglas no modifica las cargas anteriores. Reimportar para aplicarlas. La
 
 Consultar `ch_v_hours`, que reúne las asignaciones de la carga completa activa y sus ampliaciones de cada origen. `sql/queries.sql` incluye ejemplos por mes, persona y tarea, pendientes y reconciliación. Sumar `hours`; `original_hours` se repite por tarea y no debe sumarse en esta vista.
 
-Tablas: `ch_sources`, `ch_imports`, `ch_records`, `ch_tasks`, `ch_allocations`, `ch_rules`, `ch_incremental_imports`. El importador no crea todavía una web ni una API. Son el siguiente paso, con esta vista como base.
+Tablas: `ch_sources`, `ch_imports`, `ch_records`, `ch_tasks`, `ch_allocations`, `ch_rules`, `ch_incremental_imports`. El dashboard local consulta esta vista mediante un endpoint de lectura; no permite editar tareas ni modificar asignaciones.
 
 ## Pruebas
 
