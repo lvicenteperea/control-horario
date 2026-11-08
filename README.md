@@ -36,7 +36,40 @@ Después comprobar conexión, crear los objetos y cargar los datos:
 
 `init-db` crea únicamente tablas y una vista con prefijo `ch_`. No borra ni modifica tablas de CORE, DATA u otras aplicaciones. Requiere permisos para crear tablas/vistas en la base seleccionada. Las futuras migraciones deberán realizarse explícitamente; `IF NOT EXISTS` no actualiza esquemas existentes.
 
-## Actualizar cada mes
+## Añadir meses nuevos (carga incremental)
+
+`control_horario.py` se mantiene para **cargas completas**. Para añadir meses nuevos, usar **`cargar_nuevos.py`**. Reutiliza la misma configuración y las reglas guardadas. Conserva los registros y las asignaciones ya existentes.
+
+Si ya se instaló la versión inicial, actualizar el repositorio y preparar una vez la nueva tabla y la vista. No borra los datos existentes:
+
+```powershell
+git pull --ff-only
+.\.venv\Scripts\python.exe control_horario.py init-db
+```
+
+Después, cada mes:
+
+```powershell
+.\.venv\Scripts\python.exe cargar_nuevos.py "C:\ruta\Horas noviembre.xlsx"
+```
+
+Se puede pasar un Excel con solo el mes nuevo o el histórico completo con meses añadidos. Se comparan los registros por **persona y año-mes**, incluyendo la fecha, horas, descripción y número de ocurrencias de cada parte:
+
+- Un mes sin registros previos para esa persona se añade. Puede ser un mes antiguo que faltaba o el mes de una persona todavía no cargada.
+- Un mes existente con exactamente los mismos partes se omite, aunque cambien las filas o su orden. Repetir el archivo no duplica las horas ni crea otra importación si no hay novedades.
+- Si un mes existente difiere o aparece solo una parte de sus registros, se rechaza **todo el archivo** sin añadir nada. Este programa no modifica ni completa un mes ya cargado: enviar meses completos por persona. Las correcciones se tratarán con un proceso de modificación; también es posible una carga completa revisada.
+
+El origen debe tener una primera carga completa hecha con `control_horario.py import`. Mantener el mismo `--source` (por defecto `horas-core`) y los nombres de las personas. Si el fichero mensual comienza con una fecha vacía, debe rellenarse: no se heredan fechas de otro archivo ni de la BBDD.
+
+Para ver qué añadiría, comparándolo con la base sin guardar cambios:
+
+```powershell
+.\.venv\Scripts\python.exe cargar_nuevos.py "C:\ruta\Horas noviembre.xlsx" --dry-run
+```
+
+Esta previsualización requiere conexión a MariaDB. La tabla nueva `ch_incremental_imports` vincula cada ampliación con la carga completa activa. Los informes de `ch_v_hours` incluyen la carga completa y sus ampliaciones. Una carga completa posterior reemplaza todo ese conjunto activo, conservando el historial.
+
+## Sustituir el conjunto con una carga completa
 
 Añadir datos o correcciones al Excel y repetir `import` con **el archivo completo**, todas las personas y el mismo `--source horas-core`. El proceso guarda una nueva instantánea y cambia la importación activa solo después de comprobar que cuadran las horas. Las anteriores permanecen en el historial. Reimportar el mismo archivo no aumenta las horas de los informes activos.
 
@@ -69,9 +102,9 @@ Guardar reglas no modifica las cargas anteriores. Reimportar para aplicarlas. La
 
 ## Consultas para DBeaver y futura web
 
-Consultar `ch_v_hours`, que reúne las asignaciones de la importación activa de cada origen. `sql/queries.sql` incluye ejemplos por mes, persona y tarea, pendientes y reconciliación. Sumar `hours`; `original_hours` se repite por tarea y no debe sumarse en esta vista.
+Consultar `ch_v_hours`, que reúne las asignaciones de la carga completa activa y sus ampliaciones de cada origen. `sql/queries.sql` incluye ejemplos por mes, persona y tarea, pendientes y reconciliación. Sumar `hours`; `original_hours` se repite por tarea y no debe sumarse en esta vista.
 
-Tablas: `ch_sources`, `ch_imports`, `ch_records`, `ch_tasks`, `ch_allocations`, `ch_rules`. El importador no crea todavía una web ni una API. Son el siguiente paso, con esta vista como base.
+Tablas: `ch_sources`, `ch_imports`, `ch_records`, `ch_tasks`, `ch_allocations`, `ch_rules`, `ch_incremental_imports`. El importador no crea todavía una web ni una API. Son el siguiente paso, con esta vista como base.
 
 ## Pruebas
 

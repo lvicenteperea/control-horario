@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS ch_rules (
   ON UPDATE CURRENT_TIMESTAMP(6)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Las cargas incrementales pertenecen a la carga completa que amplían.
+-- Una carga completa posterior reemplaza la vista activa de todo el conjunto.
+CREATE TABLE IF NOT EXISTS ch_incremental_imports (
+ import_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+ base_import_id BIGINT UNSIGNED NOT NULL,
+ FOREIGN KEY (import_id) REFERENCES ch_imports(id),
+ FOREIGN KEY (base_import_id) REFERENCES ch_imports(id),
+ INDEX ix_ch_incremental_base (base_import_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE OR REPLACE VIEW ch_v_hours AS
  SELECT s.name AS source, i.id AS import_id, r.id AS record_id,
  r.person, r.work_date, DATE_FORMAT(r.work_date, '%Y-%m') AS month,
@@ -67,7 +77,11 @@ CREATE OR REPLACE VIEW ch_v_hours AS
  a.method, a.review_status, r.original_hours, r.original_description,
  r.date_inherited, r.sheet_name, r.source_row
  FROM ch_sources s
- JOIN ch_imports i ON i.id=s.active_import_id
+ JOIN ch_imports i ON i.source_id=s.id
+  AND (i.id=s.active_import_id OR EXISTS (
+   SELECT 1 FROM ch_incremental_imports ci
+   WHERE ci.import_id=i.id AND ci.base_import_id=s.active_import_id
+  ))
  JOIN ch_records r ON r.import_id=i.id
  JOIN ch_allocations a ON a.record_id=r.id
  JOIN ch_tasks t ON t.id=a.task_id;
