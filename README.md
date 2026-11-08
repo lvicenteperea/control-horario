@@ -49,7 +49,7 @@ El programa solicita la contraseña una vez y abre el navegador en **http://127.
 
 Funciones disponibles:
 
-- Filtros por origen, persona, ámbito, tarea, fechas inicial/final (incluidas) y estado de revisión. Selección vacía significa todos los valores.
+- Filtros de **multiselección** por origen, persona, ámbito, tarea y estado de revisión; fechas inicial/final incluidas. Dentro de cada filtro se incluye cualquiera de los valores seleccionados, y se combinan los distintos filtros. Selección vacía significa todos los valores. En Windows, mantener **Ctrl** al hacer clic para seleccionar o quitar varios valores (Cmd en Mac); Mayús selecciona un intervalo. **Limpiar filtros** quita todas las selecciones. Las selecciones disponibles se conservan al actualizar los datos.
 - Búsqueda en el nombre de la tarea y la descripción original.
 - Total de horas asignadas, tareas, registros de origen distintos y horas pendientes de revisión.
 - Gráficos por tarea, evolución mensual y persona. El gráfico de tareas muestra las 15 principales; el resumen contiene todas.
