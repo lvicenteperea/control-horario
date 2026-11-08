@@ -1,0 +1,13 @@
+[
+  {
+    "description": "Subir a prod",
+    "tasks": [{"scope": "CORE - DATA", "name": "Pase a producción"}]
+  },
+  {
+    "description": "Reunión y pase a producción",
+    "tasks": [
+      {"scope": "CORE - DATA", "name": "Reuniones"},
+      {"scope": "CORE - DATA", "name": "Pase a producción"}
+    ]
+  }
+]
